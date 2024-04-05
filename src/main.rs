@@ -1,5 +1,7 @@
 use std::process::{Command, exit};
-use std::fs;
+use std::fs::File;
+use std::io::BufReader;
+use xml::reader::{EventReader, XmlEvent};
 
 fn check_and_install_sudo() {
     // Check if sudo is installed
@@ -19,42 +21,49 @@ fn check_and_install_sudo() {
 }
 
 fn read_ip_and_port_from_file(file_path: &str) -> (String, String) {
-    // Read IP address and port from the file using sudo
-    let sudo_output = Command::new("sudo")
-        .arg("grep")
-        .arg("-oP")
-        .arg("<address>.*?</address>|<port>.*?</port>")
-        .arg(file_path)
-        .output();
+    // Open the XML file
+    let file = File::open(file_path).expect("Failed to open file");
+    let reader = BufReader::new(file);
 
-    match sudo_output {
-        Ok(output) => {
-            // Check if the command was successful
-            if output.status.success() {
-                // Convert the output bytes to a string
-                let contents = String::from_utf8_lossy(&output.stdout);
-                // Extract IP address and port
-                let mut ip = String::new();
-                let mut port = String::new();
-                for line in contents.lines() {
-                    if line.contains("<address>") {
-                        ip = line.trim_start_matches("<address>").trim_end_matches("</address>").trim().to_string();
-                    } else if line.contains("<port>") {
-                        port = line.trim_start_matches("<port>").trim_end_matches("</port>").trim().to_string();
-                    }
+    // Create XML reader
+    let parser = EventReader::new(reader);
+
+    // Variables to store IP address and port
+    let mut ip = String::new();
+    let mut port = String::new();
+    let mut in_address = false;
+    let mut in_port = false;
+
+    // Iterate over XML events
+    for event in parser {
+        match event {
+            Ok(XmlEvent::StartElement { name, .. }) => {
+                match name.local_name.as_str() {
+                    "address" => in_address = true,
+                    "port" => in_port = true,
+                    _ => {}
                 }
-                (ip, port)
-            } else {
-                // Print stderr if the command failed
-                eprintln!("Error reading file: {}", String::from_utf8_lossy(&output.stderr));
-                exit(1);
             }
-        },
-        Err(_) => {
-            eprintln!("Error running sudo command to read file.");
-            exit(1);
+            Ok(XmlEvent::Characters(characters)) => {
+                if in_address {
+                    ip = characters.to_string();
+                }
+                if in_port {
+                    port = characters.to_string();
+                }
+            }
+            Ok(XmlEvent::EndElement { name }) => {
+                match name.local_name.as_str() {
+                    "address" => in_address = false,
+                    "port" => in_port = false,
+                    _ => {}
+                }
+            }
+            _ => {}
         }
     }
+
+    (ip, port)
 }
 
 fn main() {
