@@ -18,11 +18,30 @@ FirewallRS is a Rust application designed to enforce strict firewall policies us
 ./target/release/firewallrs
 ```
 
+### Revert back to normal stage
+
+To revert back the iptables configuration set by the implemented code, you can execute the following commands:
+
+```bash
+sudo iptables -P INPUT ACCEPT
+sudo iptables -P OUTPUT ACCEPT
+sudo iptables -F
+```
+
+These commands will:
+
+1. Set the default policy for incoming traffic (`INPUT`) and outgoing traffic (`OUTPUT`) to `ACCEPT`.
+2. Flush all the rules in the iptables ruleset (`-F` option).
+
+Executing these commands will revert the iptables configuration back to allowing all incoming and outgoing traffic by default and remove any custom rules that were added.
+
 ### Demonstration
 
 - The application checks for the presence of `sudo` and `iptables`, installs them if necessary, and configures `iptables` rules.
 - It ensures strict policy enforcement, allowing only specified traffic while dropping all others.
 - Examples of usage and system responses are provided within the repository's README.
+
+![Demo Image](/assets/demo.png)
 
 ### Repository
 
