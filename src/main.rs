@@ -81,7 +81,8 @@ fn main() {
                     match distro_name.trim() {
                         "Fedora" => {
                             // Install iptables on Fedora using dnf
-                            let _ = Command::new("dnf")
+                            let _ = Command::new("sudo")
+                                .arg("dnf")
                                 .arg("install")
                                 .arg("-y")
                                 .arg("iptables")
@@ -89,7 +90,8 @@ fn main() {
                         },
                         "Ubuntu" => {
                             // Install iptables on Ubuntu using apt
-                            let _ = Command::new("apt")
+                            let _ = Command::new("sudo")
+                                .arg("apt")
                                 .arg("install")
                                 .arg("-y")
                                 .arg("iptables")
@@ -115,20 +117,24 @@ fn main() {
     let interfaces = vec!["eth0", "wlan0", "lo"]; // Add other interfaces as needed
 
     for interface in interfaces {
-        let _ = Command::new("iptables")
+        let _ = Command::new("sudo")
+            .arg("iptables")
             .args(&["-A", "INPUT", "-i", interface, "-j", "DROP"])
             .status();
 
-        let _ = Command::new("iptables")
+        let _ = Command::new("sudo")
+            .arg("iptables")
             .args(&["-A", "OUTPUT", "-o", interface, "-j", "DROP"])
             .status();
     }
 
-    let _ = Command::new("iptables")
+    let _ = Command::new("sudo")
+        .arg("iptables")
         .args(&["-A", "INPUT", "-s", "192.168.1.100", "-p", "tcp", "--dport", "8080", "-j", "ACCEPT"])
         .status();
 
-    let _ = Command::new("iptables")
+    let _ = Command::new("sudo")
+        .arg("iptables")
         .args(&["-A", "OUTPUT", "-d", "192.168.1.200", "-p", "tcp", "--dport", "9090", "-j", "ACCEPT"])
         .status();
 }
