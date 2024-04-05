@@ -113,28 +113,22 @@ fn main() {
         }
     }
 
-    // Configure device isolation and allow specific IP and ports
-    let interfaces = vec!["eth0", "wlan0", "lo"]; // Add other interfaces as needed
-
-    for interface in interfaces {
-        let _ = Command::new("sudo")
-            .arg("iptables")
-            .args(&["-A", "INPUT", "-i", interface, "-j", "DROP"])
-            .status();
-
-        let _ = Command::new("sudo")
-            .arg("iptables")
-            .args(&["-A", "OUTPUT", "-o", interface, "-j", "DROP"])
-            .status();
-    }
-
+    // Configure iptables for strict policy
     let _ = Command::new("sudo")
-        .arg("iptables")
-        .args(&["-A", "INPUT", "-s", "192.168.1.100", "-p", "tcp", "--dport", "8080", "-j", "ACCEPT"])
+        .args(&["iptables", "-P", "INPUT", "DROP"])
         .status();
 
     let _ = Command::new("sudo")
-        .arg("iptables")
-        .args(&["-A", "OUTPUT", "-d", "192.168.1.200", "-p", "tcp", "--dport", "9090", "-j", "ACCEPT"])
+        .args(&["iptables", "-P", "OUTPUT", "DROP"])
         .status();
+
+    let _ = Command::new("sudo")
+        .args(&["iptables", "-A", "INPUT", "-s", "192.168.1.100", "-p", "tcp", "--dport", "8080", "-j", "ACCEPT"])
+        .status();
+
+    let _ = Command::new("sudo")
+        .args(&["iptables", "-A", "OUTPUT", "-d", "192.168.1.100", "-p", "tcp", "--sport", "8080", "-j", "ACCEPT"])
+        .status();
+
+    println!("iptables rules configured with strict policy.");
 }
