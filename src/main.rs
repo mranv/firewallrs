@@ -1,100 +1,82 @@
 use std::process::{Command, exit};
-use std::fs::{self, File};
-use std::io::{self, BufReader, BufRead, Write};
-use xml::reader::{EventReader, XmlEvent};
+use std::fs::{File, OpenOptions};
+use std::io::{BufReader, BufRead, Seek, SeekFrom, Read, Write};
 
-fn check_and_install_sudo() {
-    // Check if sudo is installed
-    let check_sudo = Command::new("sudo")
-        .arg("--version")
-        .output();
-
-    match check_sudo {
-        Ok(_) => {
-            println!("sudo is installed.");
-        },
-        Err(_) => {
-            println!("sudo is not installed. Exiting...");
-            exit(1);
-        }
-    }
-}
 
 fn read_ip_and_port_from_file(file_path: &str) -> (String, String) {
     // Open the XML file
     let file = File::open(file_path).expect("Failed to open file");
     let reader = BufReader::new(file);
 
-    // Create XML reader
-    let parser = EventReader::new(reader);
-
     // Variables to store IP address and port
     let mut ip = String::new();
     let mut port = String::new();
+
+    // Track if address and port are found
     let mut in_address = false;
     let mut in_port = false;
 
-    // Iterate over XML events
-    for event in parser {
-        match event {
-            Ok(XmlEvent::StartElement { name, .. }) => {
-                match name.local_name.as_str() {
-                    "address" => in_address = true,
-                    "port" => in_port = true,
-                    _ => {}
-                }
+    // Iterate over each line in the file
+    for line in reader.lines() {
+        let line = line.expect("Failed to read line");
+        if line.contains("<address>") {
+            // Extract IP address
+            ip = line.trim_start_matches("      <address>").trim_end_matches("</address>").trim().to_string();
+            in_address = true;
+        } else if line.contains("<port>") {
+            // Extract port
+            port = line.trim_start_matches("      <port>").trim_end_matches("</port>").trim().to_string();
+            in_port = true;
+        } else if line.contains("</server>") {
+            // If both address and port are found, break
+            if in_address && in_port {
+                break;
             }
-            Ok(XmlEvent::Characters(characters)) => {
-                if in_address {
-                    ip = characters.to_string();
-                }
-                if in_port {
-                    port = characters.to_string();
-                }
-            }
-            Ok(XmlEvent::EndElement { name }) => {
-                match name.local_name.as_str() {
-                    "address" => in_address = false,
-                    "port" => in_port = false,
-                    _ => {}
-                }
-            }
-            _ => {}
         }
     }
 
     (ip, port)
 }
 
-fn update_ossec_conf(file_path: &str) -> io::Result<()> {
-    let timestamp = chrono::Local::now().to_rfc3339();
-    let mut contents = fs::read_to_string(file_path)?;
+fn update_config_file_with_timestamp(file_path: &str, timestamp: &str) {
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(file_path)
+        .expect("Failed to open file");
 
-    // Check if the file already contains the <inbound_stop_time> and <outbound_stop_time> tags
-    if !contents.contains("<inbound_stop_time>") || !contents.contains("<outbound_stop_time>") {
-        // Append the new tags with the current timestamp
-        contents.push_str(&format!(
-            "\n<inbound_stop_time>{}</inbound_stop_time>\n<outbound_stop_time>{}</outbound_stop_time>\n",
-            timestamp, timestamp
-        ));
+    let mut content = String::new();
+    file.read_to_string(&mut content).expect("Failed to read file");
 
-        // Write the updated contents back to the file
-        let mut file = File::create(file_path)?;
-        file.write_all(contents.as_bytes())?;
-        println!("Updated {} with inbound and outbound stop times.", file_path);
-    } else {
-        println!("Inbound and outbound stop times already exist in {}.", file_path);
-    }
+    // Find the position to insert the label
+    let insertion_point = content.find("</ossec_config>")
+        .expect("Failed to find insertion point");
 
-    Ok(())
+    // Insert the label with the timestamp
+    let new_content = format!("\n{}<labels>\n  <label key=\"isolated.time\">{}</label>\n</labels>\n{}", &content[..insertion_point], timestamp, &content[insertion_point..]);
+
+    // Move the cursor to the beginning of the file
+    file.seek(SeekFrom::Start(0)).expect("Failed to seek to the beginning of the file");
+
+    // Write the updated content to the file
+    file.write_all(new_content.as_bytes()).expect("Failed to write to file");
 }
 
 fn main() {
-    // Check and install sudo if necessary
-    check_and_install_sudo();
 
     // Read IP address and port from the file
     let (ip, port) = read_ip_and_port_from_file("/var/ossec/etc/ossec.conf");
+
+    // Get the current time as timestamp
+    let current_time = chrono::Utc::now().to_rfc3339();
+
+    // Update the configuration file with the timestamp
+    update_config_file_with_timestamp("/var/ossec/etc/ossec.conf", &current_time);
+
+    // Add your existing code to configure iptables and print the message here
+    // Configure iptables for strict policy and print message
+    
+
 
     // Check if iptables is installed
     let check_iptables = Command::new("iptables")
@@ -128,11 +110,7 @@ fn main() {
         .args(&["iptables", "-A", "OUTPUT", "-d", &ip, "-p", "tcp", "--sport", &port, "-j", "ACCEPT"])
         .status();
 
-    println!("iptables rules configured with strict policy based on the IP address {} and port {} from the file /var/ossec/etc/ossec.conf.", ip, port);
+        let configure_iptables_msg = format!("iptables rules configured with strict policy based on the IP address {} and port {} from the file /var/ossec/etc/ossec.conf.", ip, port);
+        println!("{}", configure_iptables_msg);
 
-    // Update the ossec.conf file with inbound and outbound stop times
-    if let Err(err) = update_ossec_conf("/var/ossec/etc/ossec.conf") {
-        eprintln!("Error updating ossec.conf: {}", err);
-        exit(1);
-    }
 }
