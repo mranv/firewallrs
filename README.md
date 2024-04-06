@@ -51,6 +51,30 @@ You can find the source code and additional information about FirewallRS in the 
 
 Contributions to FirewallRS are welcome! If you encounter any issues or have suggestions for improvement, feel free to open an issue or submit a pull request.
 
-### License
+# Change Logs
 
-This project is licensed under the [MIT License](LICENSE).
+<strong>2024-04-06T16:21:00.760527+05:30</strong>
+
+#### What the Code Does:
+
+The code is a Rust program designed to perform the following tasks:
+
+1. **Check if `sudo` is installed**: The program verifies if `sudo` is installed on the system.
+
+2. **Read IP Address and Port from XML Configuration File**: It parses the XML configuration file located at `/var/ossec/etc/ossec.conf` to extract the IP address and port.
+
+3. **Check if `iptables` is Installed**: The program checks if `iptables` is installed on the system.
+
+4. **Configure `iptables` Rules**: It configures `iptables` rules to enforce a strict policy on inbound and outbound traffic based on the extracted IP address and port.
+
+5. **Update Configuration File**: The program updates the XML configuration file `/var/ossec/etc/ossec.conf` with the current timestamp for inbound and outbound traffic stop times.
+
+#### Changes Made:
+
+1. **Added `update_ossec_conf` Function**: This function updates the XML configuration file with inbound and outbound traffic stop times. It checks if the file already contains the required tags; if not, it appends them with the current timestamp.
+
+2. **Modified Main Function**: Incorporated the `update_ossec_conf` function call to update the configuration file after configuring `iptables` rules.
+
+3. **Updated Error Handling**: Improved error handling to gracefully handle potential errors during file operations and `iptables` configuration.
+
+![update ossec.conf](/assets/updateossec.conf.png)
