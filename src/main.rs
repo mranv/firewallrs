@@ -1,6 +1,6 @@
 use std::process::{Command, exit};
-use std::fs::File;
-use std::io::BufReader;
+use std::fs::{self, File};
+use std::io::{self, BufReader, BufRead, Write};
 use xml::reader::{EventReader, XmlEvent};
 
 fn check_and_install_sudo() {
@@ -66,6 +66,29 @@ fn read_ip_and_port_from_file(file_path: &str) -> (String, String) {
     (ip, port)
 }
 
+fn update_ossec_conf(file_path: &str) -> io::Result<()> {
+    let timestamp = chrono::Local::now().to_rfc3339();
+    let mut contents = fs::read_to_string(file_path)?;
+
+    // Check if the file already contains the <inbound_stop_time> and <outbound_stop_time> tags
+    if !contents.contains("<inbound_stop_time>") || !contents.contains("<outbound_stop_time>") {
+        // Append the new tags with the current timestamp
+        contents.push_str(&format!(
+            "\n<inbound_stop_time>{}</inbound_stop_time>\n<outbound_stop_time>{}</outbound_stop_time>\n",
+            timestamp, timestamp
+        ));
+
+        // Write the updated contents back to the file
+        let mut file = File::create(file_path)?;
+        file.write_all(contents.as_bytes())?;
+        println!("Updated {} with inbound and outbound stop times.", file_path);
+    } else {
+        println!("Inbound and outbound stop times already exist in {}.", file_path);
+    }
+
+    Ok(())
+}
+
 fn main() {
     // Check and install sudo if necessary
     check_and_install_sudo();
@@ -106,4 +129,10 @@ fn main() {
         .status();
 
     println!("iptables rules configured with strict policy based on the IP address {} and port {} from the file /var/ossec/etc/ossec.conf.", ip, port);
+
+    // Update the ossec.conf file with inbound and outbound stop times
+    if let Err(err) = update_ossec_conf("/var/ossec/etc/ossec.conf") {
+        eprintln!("Error updating ossec.conf: {}", err);
+        exit(1);
+    }
 }
