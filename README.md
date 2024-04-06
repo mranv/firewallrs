@@ -78,3 +78,21 @@ The code is a Rust program designed to perform the following tasks:
 3. **Updated Error Handling**: Improved error handling to gracefully handle potential errors during file operations and `iptables` configuration.
 
 ![update ossec.conf](/assets/updateossec.conf.png)
+
+<strong>2024-04-06T16:47:40.854216+05:30</strong>
+
+#### Changelog
+
+- **Added XML Parsing Functionality**: Implemented a function `read_ip_and_port_from_file` to read the IP address and port from the specified XML configuration file (`/var/ossec/etc/ossec.conf`). This function parses the XML structure using a `BufReader` and extracts the IP address and port elements.
+
+- **Updated Configuration File with Timestamp**: Implemented a function `update_config_file_with_timestamp` to update the XML configuration file with a timestamp indicating when inbound and outbound traffic has been stopped. This function opens the file in read-write mode, finds the appropriate insertion point just before the closing `</ossec_config>` tag, and inserts a new `<labels>` section containing a `<label>` element with the specified timestamp.
+
+- **Integrated Existing Functionality**: Integrated the existing functionality for checking and installing `sudo`, configuring iptables with strict policy, and printing a confirmation message. These functionalities are now part of the `main` function.
+
+- **Timestamp Generation**: Utilized the `chrono` crate to generate a timestamp representing the current time in RFC 3339 format (`YYYY-MM-DDTHH:MM:SS.ffffffZ`).
+
+- **Output Message**: A confirmation message is printed indicating that iptables rules have been configured with a strict policy based on the IP address and port extracted from the XML configuration file.
+
+This code aims to automate the process of reading configuration details from an XML file, updating the file with relevant information, and configuring iptables accordingly, providing a streamlined solution for managing firewall rules and configuration.
+
+![added label based saving on xml](/assets/label.png)
