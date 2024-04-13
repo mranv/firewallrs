@@ -41,7 +41,7 @@ Executing these commands will revert the iptables configuration back to allowing
 - It ensures strict policy enforcement, allowing only specified traffic while dropping all others.
 - Examples of usage and system responses are provided within the repository's README.
 
-![Anubhav Gain](/assets/demo.png)
+![Anubhav Gain](assets/demo.png)
 
 ### Reviewing the code working or not
 
@@ -59,7 +59,7 @@ The output of `sudo iptables -L -n` shows the current configuration of the iptab
 
 Based on this output, it seems like the program successfully configured iptables rules to allow incoming traffic from `10.0.0.2` on port `1514` and outgoing traffic to `10.0.0.2` on port `1514`, as expected.
 
-![Firewall Image](/assets/firewall-change.png)
+![Firewall Image](assets/firewall-change.png)
 
 ### Repository
 
@@ -68,7 +68,6 @@ You can find the source code and additional information about FirewallRS in the 
 ### Contributions
 
 Contributions to FirewallRS are welcome! If you encounter any issues or have suggestions for improvement, feel free to open an issue or submit a pull request.
-
 
 # Change Logs
 
@@ -96,7 +95,7 @@ The code is a Rust program designed to perform the following tasks:
 
 3. **Updated Error Handling**: Improved error handling to gracefully handle potential errors during file operations and `iptables` configuration.
 
-![update ossec.conf](/assets/updateossec.conf.png)
+![update ossec.conf](assets/updateossec.conf.png)
 
 <strong>2024-04-06T16:47:40.854216+05:30</strong>
 
@@ -114,4 +113,4 @@ The code is a Rust program designed to perform the following tasks:
 
 This code aims to automate the process of reading configuration details from an XML file, updating the file with relevant information, and configuring iptables accordingly, providing a streamlined solution for managing firewall rules and configuration.
 
-![added label based saving on xml](/assets/label.png)
+![added label based saving on xml](assets/label.png)

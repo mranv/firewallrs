@@ -2,7 +2,6 @@ use std::process::{Command, exit};
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufRead, Seek, SeekFrom, Read, Write};
 
-
 fn read_ip_and_port_from_file(file_path: &str) -> (String, String) {
     // Open the XML file
     let file = File::open(file_path).expect("Failed to open file");
@@ -63,7 +62,6 @@ fn update_config_file_with_timestamp(file_path: &str, timestamp: &str) {
 }
 
 fn main() {
-
     // Read IP address and port from the file
     let (ip, port) = read_ip_and_port_from_file("/var/ossec/etc/ossec.conf");
 
@@ -72,11 +70,6 @@ fn main() {
 
     // Update the configuration file with the timestamp
     update_config_file_with_timestamp("/var/ossec/etc/ossec.conf", &current_time);
-
-    // Add your existing code to configure iptables and print the message here
-    // Configure iptables for strict policy and print message
-    
-
 
     // Check if iptables is installed
     let check_iptables = Command::new("iptables")
@@ -92,7 +85,12 @@ fn main() {
         }
     }
 
-    // Configure iptables for strict policy
+    // Flush existing iptables rules to start fresh
+    let _ = Command::new("sudo")
+        .args(&["iptables", "-F"])
+        .status();
+
+    // Default policy: drop all incoming and outgoing traffic
     let _ = Command::new("sudo")
         .args(&["iptables", "-P", "INPUT", "DROP"])
         .status();
@@ -101,16 +99,29 @@ fn main() {
         .args(&["iptables", "-P", "OUTPUT", "DROP"])
         .status();
 
-    // Add rules for inbound and outbound traffic
     let _ = Command::new("sudo")
-        .args(&["iptables", "-A", "INPUT", "-s", &ip, "-p", "tcp", "--dport", &port, "-j", "ACCEPT"])
+        .args(&["iptables", "-P", "FORWARD", "DROP"])
+        .status();
+
+    // Allow established and related incoming connections
+    let _ = Command::new("sudo")
+        .args(&["iptables", "-A", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"])
+        .status();
+
+    // Allow outgoing connections to the Wazuh manager and registration server on the specified port
+    let _ = Command::new("sudo")
+        .args(&["iptables", "-A", "OUTPUT", "-p", "tcp", "-d", &ip, "--dport", &port, "-j", "ACCEPT"])
+        .status();
+
+    // Allow loopback access
+    let _ = Command::new("sudo")
+        .args(&["iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT"])
         .status();
 
     let _ = Command::new("sudo")
-        .args(&["iptables", "-A", "OUTPUT", "-d", &ip, "-p", "tcp", "--sport", &port, "-j", "ACCEPT"])
+        .args(&["iptables", "-A", "OUTPUT", "-o", "lo", "-j", "ACCEPT"])
         .status();
 
-        let configure_iptables_msg = format!("iptables rules configured with strict policy based on the IP address {} and port {} from the file /var/ossec/etc/ossec.conf.", ip, port);
-        println!("{}", configure_iptables_msg);
-
+    let configure_iptables_msg = format!("iptables rules configured with strict policy based on the IP address {} and port {} from the file /var/ossec/etc/ossec.conf.", ip, port);
+    println!("{}", configure_iptables_msg);
 }
